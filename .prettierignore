@@ -1,0 +1,7 @@
+*.env
+.env
+/node_modules
+**/.git
+**/.svn
+**/.hg
+**/node_modules

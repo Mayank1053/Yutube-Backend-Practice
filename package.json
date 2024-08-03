@@ -1,0 +1,16 @@
+{
+  "name": "yutube",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/index.js"
+  },
+  "author": "Mayank1053",
+  "license": "ISC",
+  "description": "Youtube Backend Project",
+  "devDependencies": {
+    "nodemon": "^3.1.4",
+    "prettier": "^3.3.3"
+  }
+}
