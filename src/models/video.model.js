@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
+//The video model has the following fields:
 /*
-The video model has the following fields:
 videoFile: The URL of the video file stored in Cloudinary.
 thumbFile: The URL of the thumbnail image stored in Cloudinary.
 title: The title of the video.

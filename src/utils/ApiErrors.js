@@ -1,3 +1,6 @@
+// This is a custom error class that extends the Error class.
+// The class is used to create custom error objects that can be thrown in the application.
+// The class takes four arguments: statusCode, message, errors, and stack.
 class ApiError extends Error {
   constructor(
     statusCode,
@@ -13,6 +16,7 @@ class ApiError extends Error {
     this.data = null;
     this.statusCode = statusCode;
     this.message = message;
+    // What is this.success here?
     this.success = false;
     this.errors = errors;
 
