@@ -80,5 +80,10 @@ const videoSchema = new mongoose.Schema(
 );
 
 videoSchema.plugin(mongooseAggregatePaginate);
+// The plugin adds a paginate method to the model for easy pagination of the videos.
+// The paginate method takes an aggregate query, options, and a callback function as arguments.
+// Model.aggregatePaginate([aggregateQuery], [options], [callback])
+// Returns promise
+// The aggregate query is used to filter, sort, and group the videos.
 
 export const Video = mongoose.model("Video", videoSchema);

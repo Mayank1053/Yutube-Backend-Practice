@@ -4,6 +4,8 @@ import cookieParser from "cookie-parser";
 
 const app = express();
 
+// Express Request middleware
+// app.use() is used to add middleware to the application.
 app.use(cors({           
   // Cross-Origin Resource Sharing (CORS) is a security feature that restricts what resources a web page can request from another domain.
   origin: process.env.CLIENT_URL,
