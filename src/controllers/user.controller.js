@@ -4,6 +4,21 @@ import ApiResponse from "../utils/ApiResponse.js";
 import { User } from "../models/user.model.js";
 import uploadOnCloudinary from "../utils/cloudinary.js";
 
+const generateAccessAndRefreshToken = async (userId) => {
+  try {
+    const user = await User.findById(userId);
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
+
+    user.refreshToken = refreshToken;
+    await user.save({ validateBeforeSave: false });
+
+    return { accessToken, refreshToken };
+  } catch (error) {
+    throw new ApiError(500, "Failed to generate tokens");
+  }
+}
+
 const registerUser = asyncHandler(async (req, res) => {
   // Steps to register a user
   // 1. Get user data from frontend(req.body)
@@ -15,8 +30,7 @@ const registerUser = asyncHandler(async (req, res) => {
   // 7. Send the modified user object in the response
 
   // 1. Get user data from frontend(req.body)
-  const { fullName, username, email, password, bio } =
-    req.body;
+  const { fullName, username, email, password, bio } = req.body;
 
   // 2. Validate user data
   if (!fullName || !username || !email || !password) {
@@ -24,7 +38,10 @@ const registerUser = asyncHandler(async (req, res) => {
   }
   // validate username and make it lowercase
   if (!/^[a-zA-Z0-9_.]+$/.test(username)) {
-    throw new ApiError(400, "Username can only contain letters, numbers, and underscores");
+    throw new ApiError(
+      400,
+      "Username can only contain letters, numbers, and underscores"
+    );
   }
 
   // validate email
@@ -40,14 +57,20 @@ const registerUser = asyncHandler(async (req, res) => {
 
   // 4. Check for avatar and cover images and upload them to cloudinary
   const avatarLocalPath = req.files?.avatar[0]?.path;
-  const coverImageLocalPath = req.files?.coverImage[0]?.path;
+  const coverImageLocalPath = req.files?.coverImage?.[0]?.path || "";
 
   if (!avatarLocalPath) {
     throw new ApiError(400, "Please provide an avatar image");
   }
   // Upload images to cloudinary
-  const avatarUrl = await uploadOnCloudinary(avatarLocalPath, `${username}-avatar`);
-  const coverImageUrl = await uploadOnCloudinary(coverImageLocalPath, `${username}-cover`);
+  const avatarUrl = await uploadOnCloudinary(
+    avatarLocalPath,
+    `${username}-avatar`
+  );
+  const coverImageUrl = await uploadOnCloudinary(
+    coverImageLocalPath,
+    `${username}-cover`
+  );
 
   if (!avatarUrl) {
     throw new ApiError(500, "Failed to upload avatar image");
@@ -65,7 +88,9 @@ const registerUser = asyncHandler(async (req, res) => {
   });
   // Check if the user is created
   // 6. Remove password and refresh token from responce
-  const modifiedUser = await User.findById(newUser._id).select("-password -refreshToken");
+  const modifiedUser = await User.findById(newUser._id).select(
+    "-password -refreshToken"
+  );
   if (!modifiedUser) {
     throw new ApiError(404, "User not Created");
   }
@@ -79,4 +104,63 @@ const registerUser = asyncHandler(async (req, res) => {
   );
 });
 
-export default registerUser;
+const loginUser = asyncHandler(async (req, res) => {
+  // Steps to login a user
+  // 1. Get user data from frontend(req.body)
+  // 2. Validate user data
+  // 3. Check if user exists in the database with the provided email or username.
+  // if does not exists then refirect them to /register.
+  // 4. Check if password is correct
+  // 5. Generate access and refresh tokens
+  // 6. Send the tokens in the response secure cookie
+
+  // 1. Get user data from frontend(req.body)
+  const { email, username, password } = req.body;
+  if (!email || !username) {
+    throw new ApiError(400, "Please provide an email or username");
+  }
+  // 2. Validate user data
+  if (!password) {
+    throw new ApiError(400, "Please provide a password");
+  }
+
+  // 3. Check if user exists in the database with the provided email or username. if does not exists then refirect them to /register.
+  const user = await User.findOne({ $or: [{ email }, { username }] });
+  if (!user) {
+    throw new ApiError(404, "User not found");
+    // Redirect to /register
+
+  }
+  // 4. Check if password is correct
+  const isPasswordCorrect = await user.comparePassword(password);
+  if (!isPasswordCorrect) {
+    throw new ApiError(401, "Invalid credentials");
+  }
+
+  // 5. Generate access and refresh tokens
+  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+    user._id
+  );
+  const loggedInUser = await User.findById(user._id).select(
+    "-password -refreshToken"
+  );
+
+  // 6. Send the tokens in the response secure cookie
+  const options = {
+    httpOnly: true,  // The cookie is not accessible via JavaScript in the browser
+    secure: true,   // secure? true for https, false for http
+    // sameSite: "none", // Uncomment this line if you are using the frontend and backend on different domains
+  };
+  return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+      new ApiResponse(200, {
+        message: "User logged in successfully",
+        user: loggedInUser, accessToken, refreshToken // Send the tokens in the response
+      })  
+    );
+});
+
+export { registerUser, loginUser };
