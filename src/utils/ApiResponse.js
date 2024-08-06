@@ -12,3 +12,5 @@ class ApiResponse {
     // If the status code is between 200 and 299, the success property is set to true.
   }
 }
+
+export default ApiResponse;
