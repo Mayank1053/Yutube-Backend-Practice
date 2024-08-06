@@ -15,28 +15,28 @@ const registerUser = asyncHandler(async (req, res) => {
   // 7. Send the modified user object in the response
 
   // 1. Get user data from frontend(req.body)
-  const { fullName, username, email, password, avatar, coverImage, bio } =
+  const { fullName, username, email, password, bio } =
     req.body;
-  console.log("email:", fullName, "username: ", username, "email: ", email);
 
   // 2. Validate user data
-  if (!fullName || !username || !email || !password || !avatar) {
+  if (!fullName || !username || !email || !password) {
     throw new ApiError(400, "Please fill in all the required fields");
   }
+  // validate username and make it lowercase
+  if (!/^[a-zA-Z0-9_.]+$/.test(username)) {
+    throw new ApiError(400, "Username can only contain letters, numbers, and underscores");
+  }
+
   // validate email
   if (!/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/.test(email)) {
     throw new ApiError(400, "Please provide a valid email address");
   }
 
   // 3. Check if user already exists
-  User.findOne({ $or: [{ username }, { email }] }, (err, user) => {
-    if (err) {
-      throw new ApiError(500, "Internal Server Error");
-    }
-    if (user) {
-      throw new ApiError(409, "User already exists");
-    }
-  });
+  const existingUser = await User.findOne({ $or: [{ username }, { email }] });
+  if (existingUser) {
+    throw new ApiError(409, "User already exists");
+  }
 
   // 4. Check for avatar and cover images and upload them to cloudinary
   const avatarLocalPath = req.files?.avatar[0]?.path;
@@ -46,8 +46,8 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Please provide an avatar image");
   }
   // Upload images to cloudinary
-  const avatarUrl = await uploadOnCloudinary(avatarLocalPath);
-  const coverImageUrl = await uploadOnCloudinary(coverImageLocalPath);
+  const avatarUrl = await uploadOnCloudinary(avatarLocalPath, `${username}-avatar`);
+  const coverImageUrl = await uploadOnCloudinary(coverImageLocalPath, `${username}-cover`);
 
   if (!avatarUrl) {
     throw new ApiError(500, "Failed to upload avatar image");
@@ -65,14 +65,10 @@ const registerUser = asyncHandler(async (req, res) => {
   });
   // Check if the user is created
   // 6. Remove password and refresh token from responce
-  User.findById(newUser._id, (err, user) => {
-    if (err) {
-      throw new ApiError(500, "Internal Server Error");
-    }
-    if (!user) {
-      throw new ApiError(404, "User not Created");
-    }
-  }).select("-password -refreshToken");
+  const modifiedUser = await User.findById(newUser._id).select("-password -refreshToken");
+  if (!modifiedUser) {
+    throw new ApiError(404, "User not Created");
+  }
 
   // 7. Send the modified user object in the response
   return res.status(201).json(

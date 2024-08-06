@@ -9,16 +9,16 @@ cloudinary.config({
 });
 
 // Upload an image
-const uploadOnCloudinary = async (imagePath) => {
+const uploadOnCloudinary = async (imagePath, public_id) => {
   try {
     if (!imagePath) {
       throw new Error("Please provide an image path");
     }
     await cloudinary.uploader.upload(imagePath, {
-      public_id: "avatar",
+      public_id: public_id || null,
     });
     // Optimize delivery by resizing and applying auto-format and auto-quality
-    const optimizeUrl = cloudinary.url("avatar", {
+    const optimizeUrl = cloudinary.url(public_id, {
       fetch_format: "auto",
       quality: "auto",
     });
