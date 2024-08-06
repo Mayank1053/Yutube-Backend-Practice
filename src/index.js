@@ -1,6 +1,5 @@
-import { connectDB } from "./dB/db.js";
-import express from "express";
-const app = express();
+import connectDB from "./dB/db.js";
+import app from "./app.js";
 
 // What does connectDB() returns?
 // connectDB() returns a promise. The promise resolves to a connection object.
@@ -9,12 +8,12 @@ const app = express();
 // The connection object has properties and methods that allow you to perform operations on the database.
 connectDB()
   .then(() => {
-    app.listen(process.env.PORT, () => {
-      console.log(`Server is running on port ${process.env.PORT}`);
+    app.listen(process.env.PORT || 3000, () => {
+      console.log(`⚙️ Server is running at port : ${process.env.PORT || 3000}`);
     });
   })
-  .catch((error) => {
-    console.log("Failed Conncetion to MONGO DB ", error);
+  .catch((err) => {
+    console.log("MONGO db connection failed !!! ", err);
   });
 
 // Which method is better this or the one in ./src/db/db.js?

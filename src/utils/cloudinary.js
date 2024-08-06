@@ -22,6 +22,7 @@ const uploadOnCloudinary = async (imagePath) => {
       fetch_format: "auto",
       quality: "auto",
     });
+    FileSystem.unlinkSync(imagePath);  // Delete the image from the local server after the upload
     console.log(optimizeUrl);
     return optimizeUrl;
   } catch (error) {

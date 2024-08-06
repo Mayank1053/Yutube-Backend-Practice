@@ -2,14 +2,17 @@
 // We need this file to handle the asynchronous functions in our route handlers.
 // We use the asyncHandler function to wrap the route handlers and catch any errors that occur.
 // The asyncHandler function takes a function as an argument and returns a new function that takes three arguments: req, res, and next.
-const asyncHandler = (fn) => (req, res, next) =>
-  // what is Promise.resolve()?
-  // Promise.resolve() is a method that returns a promise that is resolved with the given value.
-  // The method is used to handle the promise rejection.
-  // The method is used to wrap the function in a promise.
-  Promise.resolve(fn(req, res, next)).catch((err) => next(err));
-  // what is next()?
-  // next() is a function that is called to pass control to the next middleware function.
+const asyncHandler = (fn) => {
+  return (req, res, next) => {
+    // what is Promise.resolve()?
+    // Promise.resolve() is a method that returns a promise that is resolved with the given value.
+    // The method is used to handle the promise rejection.
+    // The method is used to wrap the function in a promise.
+    Promise.resolve(fn(req, res, next)).catch((err) => next(err));
+  };
+};
+// what is next()?
+// next() is a function that is called to pass control to the next middleware function.
 
 export default asyncHandler;
 
