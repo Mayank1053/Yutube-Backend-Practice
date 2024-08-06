@@ -163,4 +163,32 @@ const loginUser = asyncHandler(async (req, res) => {
     );
 });
 
-export { registerUser, loginUser };
+const logoutUser = asyncHandler(async (req, res) => {
+  // Steps to logout a user
+  // 1. Clear the refresh token from the database
+  // 2. Clear the access and refresh tokens from the cookies
+  // 3. Send a response with a message
+
+  // 1. Clear the refresh token from the database
+  const user = await User.findByIdAndUpdate(req.user._id, {
+    refreshToken: "",
+  }, { new: true });
+
+  // 2. Clear the access and refresh tokens from the cookies
+  const options = {
+    httpOnly: true,
+    secure: true,
+    // sameSite: "none",
+  };
+  return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(
+      new ApiResponse(200, {
+        message: "User logged out successfully",
+      })
+    );
+});
+
+export { registerUser, loginUser, logoutUser };
