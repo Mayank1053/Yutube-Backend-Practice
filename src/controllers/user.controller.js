@@ -4,6 +4,7 @@ import ApiResponse from "../utils/ApiResponse.js";
 import { User } from "../models/user.model.js";
 import uploadOnCloudinary from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -89,20 +90,17 @@ const registerUser = asyncHandler(async (req, res) => {
   });
   // Check if the user is created
   // 6. Remove password and refresh token from responce
-  const modifiedUser = await User.findById(newUser._id).select(
+  const createdUser = await User.findById(newUser._id).select(
     "-password -refreshToken"
   );
-  if (!modifiedUser) {
+  if (!createdUser) {
     throw new ApiError(404, "User not Created");
   }
 
   // 7. Send the modified user object in the response
-  return res.status(201).json(
-    new ApiResponse(201, {
-      message: "User created successfully",
-      user: newUser,
-    })
-  );
+  return res
+    .status(201)
+    .json(new ApiResponse(201, createdUser, "User registered successfully"));
 });
 
 const loginUser = asyncHandler(async (req, res) => {
@@ -156,12 +154,15 @@ const loginUser = asyncHandler(async (req, res) => {
     .cookie("accessToken", accessToken, options)
     .cookie("refreshToken", refreshToken, options)
     .json(
-      new ApiResponse(200, {
-        message: "User logged in successfully",
-        user: loggedInUser,
-        accessToken,
-        refreshToken, // Send the tokens in the response
-      })
+      new ApiResponse(
+        200,
+        {
+          user: loggedInUser,
+          accessToken,
+          refreshToken, // Send the tokens in the response
+        },
+        "User logged in successfully"
+      )
     );
 });
 
@@ -190,11 +191,7 @@ const logoutUser = asyncHandler(async (req, res) => {
     .status(200)
     .clearCookie("accessToken", options)
     .clearCookie("refreshToken", options)
-    .json(
-      new ApiResponse(200, {
-        message: "User logged out successfully",
-      })
-    );
+    .json(new ApiResponse(200, {}, "User logged out successfully"));
 });
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
@@ -242,11 +239,11 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       .cookie("accessToken", accessToken, options)
       .cookie("refreshToken", newRefreshToken, options)
       .json(
-        new ApiResponse(200, {
-          message: "Access token refreshed successfully",
-          accessToken,
-          refreshToken: newRefreshToken,
-        })
+        new ApiResponse(
+          200,
+          { accessToken, refreshToken: newRefreshToken }, // Send the new tokens in the response
+          "Access token refreshed successfully"
+        )
       );
   } catch (error) {
     throw new ApiError(401, "Unauthorized access");
@@ -287,11 +284,9 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
   await user.save({ validateBeforeSave: false });
 
   // 5. Send a response with a message
-  return res.status(200).json(
-    new ApiResponse(200, {
-      message: "Password updated successfully",
-    })
-  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Password changed successfully"));
 });
 
 // const forgotPassword = asyncHandler(async (req, res) => {
@@ -328,12 +323,9 @@ const updateUserDetails = asyncHandler(async (req, res) => {
   }
 
   // 3. Send the updated user object in the response
-  return res.status(200).json(
-    new ApiResponse(200, {
-      message: "User updated successfully",
-      user,
-    })
-  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "User details updated successfully"));
 });
 
 const updateAvatar = asyncHandler(async (req, res) => {
@@ -344,7 +336,7 @@ const updateAvatar = asyncHandler(async (req, res) => {
   // 4. Send the updated user object in the response
 
   // 1. Get the avatar image from the request
-  const avatarLocalPath = req.files?.avatar[0]?.path;
+  const avatarLocalPath = req.file?.path;
   if (!avatarLocalPath) {
     throw new ApiError(400, "Please provide an avatar image");
   }
@@ -373,12 +365,9 @@ const updateAvatar = asyncHandler(async (req, res) => {
   }
 
   // 4. Send the updated user object in the response
-  return res.status(200).json(
-    new ApiResponse(200, {
-      message: "Avatar updated successfully",
-      user,
-    })
-  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Avatar updated successfully"));
 });
 
 const updateCoverImage = asyncHandler(async (req, res) => {
@@ -389,7 +378,7 @@ const updateCoverImage = asyncHandler(async (req, res) => {
   // 4. Send the updated user object in the response
 
   // 1. Get the cover image from the request
-  const coverImageLocalPath = req.files?.coverImage?.[0]?.path;
+  const coverImageLocalPath = req.file?.path;
   if (!coverImageLocalPath) {
     throw new ApiError(400, "Please provide a cover image");
   }
@@ -418,12 +407,9 @@ const updateCoverImage = asyncHandler(async (req, res) => {
   }
 
   // 4. Send the updated user object in the response
-  return res.status(200).json(
-    new ApiResponse(200, {
-      message: "Cover image updated successfully",
-      user,
-    })
-  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Cover image updated successfully"));
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
@@ -435,12 +421,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
   const user = req.user;
 
   // 2. Send the user object in the response
-  return res.status(200).json(
-    new ApiResponse(200, {
-      message: "User found",
-      user,
-    })
-  );
+  return res.status(200).json(new ApiResponse(200, user, "User found"));
 });
 
 const getChannelInfo = asyncHandler(async (req, res) => {
@@ -451,8 +432,10 @@ const getChannelInfo = asyncHandler(async (req, res) => {
 
   // 1. Get the username from the request params
   const { username } = req.params;
+  console.log(username);
+  
 
-  if (!username?.trim) {
+  if (!username?.trim()) {
     throw new ApiError(400, "Please provide a username");
   }
 
@@ -461,7 +444,7 @@ const getChannelInfo = asyncHandler(async (req, res) => {
     {
       // Match the channel name with the provided username
       $match: {
-        username,
+        username: username.trim(),
       },
     },
     {
@@ -469,7 +452,7 @@ const getChannelInfo = asyncHandler(async (req, res) => {
       $lookup: {
         from: "subscriptions",
         localField: "_id",
-        foreignField: "channel",
+        foreignField: "creator",
         as: "subscribers",
       },
     },
@@ -489,7 +472,7 @@ const getChannelInfo = asyncHandler(async (req, res) => {
         subscriptionCount: { $size: "$subscriptions" },
         isSubscribed: {
           $cond: {
-            if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+            if: { $in: [Object(req.user?._id), "$subscribers.subscriber"] },
             then: true,
             else: false,
           },
@@ -515,12 +498,15 @@ const getChannelInfo = asyncHandler(async (req, res) => {
   }
 
   // 3. Send the channel object in the response
-  return res.status(200).json(
-    new ApiResponse(200, {
-      message: "Channel found",
-      channel: channel[0],
-    })
-  );
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { channel: channel[0] },
+        "Channel details fetched successfully"
+      )
+    );
 });
 // This controller will be used only after getting channel info
 // const subscribeUnsubscribe = asyncHandler(async(req, res) => {
@@ -627,12 +613,15 @@ const getWatchHistory = asyncHandler(async (req, res) => {
     },
   ]);
 
-  return res.status(200).json(
-    new ApiResponse(200, {
-      message: "Watch history fetched",
-      watchHistory: watchHistory[0].watchHistory,
-    })
-  );
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        watchHistory[0].watchHistory,
+        "Watch history fetched"
+      )
+    );
 });
 
 export {
