@@ -3,6 +3,7 @@ import ApiError from "../utils/ApiErrors.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import { User } from "../models/user.model.js";
 import uploadOnCloudinary from "../utils/cloudinary.js";
+import jwt from "jsonwebtoken";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -196,4 +197,55 @@ const logoutUser = asyncHandler(async (req, res) => {
     );
 });
 
-export { registerUser, loginUser, logoutUser };
+const refreshAccessToken = asyncHandler(async (req, res) =>{
+  // Steps to refresh access token
+  // 1. Get the refresh token from the cookies
+  // 2. Check if the refresh token is valid
+  // 3. Generate a new access token and refresh token
+  // 4. Send the new access token and refresh token in the response
+
+  // 1. Get the refresh token from the cookies
+  const { refreshToken: reauthToken } = req.cookies;
+
+  // 2. Check if the refresh token is valid
+  if (!reauthToken) {
+    throw new ApiError(401, "Unauthorized access");
+  }
+
+  try {
+    // 3. Generate a new access token and refresh token
+    // Verify the refresh token using the refresh token secret key
+    const decodedToken = jwt.verify(reauthToken, process.env.REFRESH_TOKEN_SECRET);
+    // Find the user with the decoded token id and refresh token
+    const user = await User.findById(decodedToken?._id);
+    // Check if the user exists and the refresh token is the same as the one in the database
+    if (!user || user.refreshToken !== reauthToken) {
+      throw new ApiError(401, "Unauthorized access");
+    }
+  
+    // Generate a new access token and refresh token
+    const {accessToken, newRefreshToken} = await generateAccessAndRefreshToken(user._id)
+  
+    // 4. Send the new access token and refresh token in the response
+    const options = {
+      httpOnly: true,
+      secure: true,
+      // sameSite: "none",
+    };
+  
+    return res.status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", newRefreshToken, options)
+    .json(
+      new ApiResponse(200, {
+        message: "Access token refreshed successfully",
+        accessToken,
+        refreshToken: newRefreshToken,
+      })
+    );
+  } catch (error) {
+    throw new ApiError(401, "Unauthorized access");
+  }
+});
+
+export { registerUser, loginUser, logoutUser, refreshAccessToken };
