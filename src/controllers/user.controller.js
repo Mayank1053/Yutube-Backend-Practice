@@ -294,10 +294,10 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
   );
 });
 
-const forgotPassword = asyncHandler(async (req, res) => {
-  // Steps to reset the password
-  // 1. Get the email from the request
-});
+// const forgotPassword = asyncHandler(async (req, res) => {
+//   // Steps to reset the password
+//   // 1. Get the email from the request
+// });
 
 const updateUserDetails = asyncHandler(async (req, res) => {
   // Steps to update user details(fullName, username, email, bio)
@@ -446,7 +446,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 const getChannelInfo = asyncHandler(async (req, res) => {
   // Steps to get the channel profile
   // 1. Get the username from the request params
-  // 2. Finding channel details using aggregate
+  // 2. Finding channel details using aggregation pipeline
   // 3. Send the channel object in the response
 
   // 1. Get the username from the request params
@@ -522,6 +522,118 @@ const getChannelInfo = asyncHandler(async (req, res) => {
     })
   );
 });
+// This controller will be used only after getting channel info
+// const subscribeUnsubscribe = asyncHandler(async(req, res) => {
+//   // Steps to subscribe or unsubscribe from a channel
+//   // 1. Get the channel username from the request params
+//   // 2. Find the channel using the username
+//   // 3. Check if the user is already subscribed or not
+//   // 4. If the user is subscribed, unsubscribe them
+//   // 5. If the user is not subscribed, subscribe them
+//   // 6. Send a response with a message
+
+//   // 1. Get the channel username from the request params
+//   const { username } = req.params;
+
+//   if (!username?.trim()) {
+//     throw new ApiError(400, "Please provide a username");
+//   }
+
+//   // 2. Find the channel using the username
+//   const channel = await User.findOne({ username });
+
+//   if (!channel) {
+//     throw new ApiError(404, "Channel not found");
+//   }
+
+//   // 3. Check if the user is already subscribed or not
+//   const isSubscribed = channel.subscribers.includes(req.user._id);
+
+//   // 4. If the user is subscribed, unsubscribe them
+//   if (isSubscribed) {
+//     await User.findByIdAndUpdate(req.user._id, {
+//       $pull: { subscriptions: channel._id },
+//     });
+//     await User.findByIdAndUpdate(channel._id, {
+//       $pull: { subscribers: req.user._id },
+//     });
+
+//     return res.status(200).json(
+//       new ApiResponse(200, {
+//         message: "Unsubscribed successfully",
+//       })
+//     );
+//   }
+
+//   // 5. If the user is not subscribed, subscribe them
+//   await User.findByIdAndUpdate(req.user._id, {
+//     $push: { subscriptions: channel._id },
+//   });
+//   await User.findByIdAndUpdate(channel._id, {
+//     $push: { subscribers: req.user._id },
+//   });
+
+//   // 6. Send a response with a message
+//   return res.status(200).json(
+//     new ApiResponse(200, {
+//       message: "Subscribed successfully",
+//     })
+//   );
+// })
+
+const getWatchHistory = asyncHandler(async (req, res) => {
+  // Steps to get the watch history using aggregation pipeline
+
+  const watchHistory = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.user._id),
+      },
+    },
+    {
+      // Lookup the videos collection to get the watch history
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "watchHistory",
+        pipeline: [
+          {
+            // lookup the user collection to get the creator details
+            $lookup: {
+              from: "users",
+              localField: "creator",
+              foreignField: "_id",
+              as: "creator",
+              pipeline: [
+                {
+                  // Project the fields to be included in the response from the user collection
+                  $project: {
+                    fullName: 1,
+                    username: 1,
+                    avatar: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $addFields: {
+              creator: { $arrayElemAt: ["$creator", 0] },
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  return res.status(200).json(
+    new ApiResponse(200, {
+      message: "Watch history fetched",
+      watchHistory: watchHistory[0].watchHistory,
+    })
+  );
+});
 
 export {
   registerUser,
@@ -529,10 +641,10 @@ export {
   logoutUser,
   refreshAccessToken,
   changeCurrentPassword,
-  forgotPassword,
   updateUserDetails,
   updateAvatar,
   updateCoverImage,
   getCurrentUser,
   getChannelInfo,
+  getWatchHistory,
 };

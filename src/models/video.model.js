@@ -13,7 +13,7 @@ dislikes: The number of dislikes the video has.
 tags: An array of tags associated with the video.
 comments: An array of comment IDs associated with the video.
 duration: The duration of the video in seconds.
-uploader: The ID of the user who uploaded the video.
+creator: The ID of the user who uploaded the video.
 privacy: The privacy setting of the video (public, private, or unlisted).
 timestamps: The timestamps of when the video was created and updated.
 */
@@ -65,7 +65,7 @@ const videoSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    uploader: {
+    creator: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
