@@ -3,7 +3,7 @@
 // We need this file to create a standard response format for our API responses.
 // We use the ApiResponse class to create an instance of the response with the status code, data, and message.
 class ApiResponse {
-  constructor(statusCode, data, message = "Success") {
+  constructor(statusCode, data, message) {
     this.statusCode = statusCode;
     this.data = data;
     this.message = message;
