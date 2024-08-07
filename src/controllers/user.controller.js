@@ -17,7 +17,7 @@ const generateAccessAndRefreshToken = async (userId) => {
   } catch (error) {
     throw new ApiError(500, "Failed to generate tokens");
   }
-}
+};
 
 const registerUser = asyncHandler(async (req, res) => {
   // Steps to register a user
@@ -116,7 +116,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
   // 1. Get user data from frontend(req.body)
   const { email, username, password } = req.body;
-  if (!email || !username) {
+  if (!(email || username)) {
     throw new ApiError(400, "Please provide an email or username");
   }
   // 2. Validate user data
@@ -129,7 +129,6 @@ const loginUser = asyncHandler(async (req, res) => {
   if (!user) {
     throw new ApiError(404, "User not found");
     // Redirect to /register
-
   }
   // 4. Check if password is correct
   const isPasswordCorrect = await user.comparePassword(password);
@@ -147,8 +146,8 @@ const loginUser = asyncHandler(async (req, res) => {
 
   // 6. Send the tokens in the response secure cookie
   const options = {
-    httpOnly: true,  // The cookie is not accessible via JavaScript in the browser
-    secure: true,   // secure? true for https, false for http
+    httpOnly: true, // The cookie is not accessible via JavaScript in the browser
+    secure: true, // secure? true for https, false for http
     // sameSite: "none", // Uncomment this line if you are using the frontend and backend on different domains
   };
   return res
@@ -158,8 +157,10 @@ const loginUser = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(200, {
         message: "User logged in successfully",
-        user: loggedInUser, accessToken, refreshToken // Send the tokens in the response
-      })  
+        user: loggedInUser,
+        accessToken,
+        refreshToken, // Send the tokens in the response
+      })
     );
 });
 
@@ -170,9 +171,13 @@ const logoutUser = asyncHandler(async (req, res) => {
   // 3. Send a response with a message
 
   // 1. Clear the refresh token from the database
-  const user = await User.findByIdAndUpdate(req.user._id, {
-    refreshToken: "",
-  }, { new: true });
+  await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      refreshToken: "",
+    },
+    { new: true }
+  );
 
   // 2. Clear the access and refresh tokens from the cookies
   const options = {
