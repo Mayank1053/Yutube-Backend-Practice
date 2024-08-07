@@ -443,6 +443,86 @@ const getCurrentUser = asyncHandler(async (req, res) => {
   );
 });
 
+const getChannelInfo = asyncHandler(async (req, res) => {
+  // Steps to get the channel profile
+  // 1. Get the username from the request params
+  // 2. Finding channel details using aggregate
+  // 3. Send the channel object in the response
+
+  // 1. Get the username from the request params
+  const { username } = req.params;
+
+  if (!username?.trim) {
+    throw new ApiError(400, "Please provide a username");
+  }
+
+  // 2. Finding channel details using aggregate
+  const channel = await User.aggregate([
+    {
+      // Match the channel name with the provided username
+      $match: {
+        username,
+      },
+    },
+    {
+      // Lookup the subscriptions collection to get the subscribers
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "channel",
+        as: "subscribers",
+      },
+    },
+    {
+      // Lookup the subscriptions collection to get the subscriptions
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "subscriptions",
+      },
+    },
+    {
+      // Add the subscriberCount, subscriptionCount, and isSubscribed fields to the user object
+      $addFields: {
+        subscriberCount: { $size: "$subscribers" },
+        subscriptionCount: { $size: "$subscriptions" },
+        isSubscribed: {
+          $cond: {
+            if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      // Project the fields to be included in the response
+      $project: {
+        fullName: 1,
+        username: 1,
+        avatar: 1,
+        coverImage: 1,
+        bio: 1,
+        subscriberCount: 1,
+        subscriptionCount: 1,
+        isSubscribed: 1,
+      },
+    },
+  ]);
+  if (!channel) {
+    throw new ApiError(404, "Channel not found");
+  }
+
+  // 3. Send the channel object in the response
+  return res.status(200).json(
+    new ApiResponse(200, {
+      message: "Channel found",
+      channel: channel[0],
+    })
+  );
+});
+
 export {
   registerUser,
   loginUser,
@@ -454,4 +534,5 @@ export {
   updateAvatar,
   updateCoverImage,
   getCurrentUser,
+  getChannelInfo,
 };
