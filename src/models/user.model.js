@@ -42,6 +42,12 @@ const userSchema = new mongoose.Schema(
       max: 100,
       trim: true,
     },
+    videos: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Video",
+      },
+    ],
     watchHistory: [
       {
         type: mongoose.Schema.Types.ObjectId,

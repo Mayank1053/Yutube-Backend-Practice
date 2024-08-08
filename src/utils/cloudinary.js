@@ -31,6 +31,16 @@ const uploadOnCloudinary = async (imagePath, public_id) => {
   }
 };
 
+// Delete an image using destroy
+const deleteOldImage = async (public_id) => {
+  try {
+    await cloudinary.uploader.destroy(public_id);
+    console.log("Image deleted successfully");
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 
 
 // // Transform the image: auto-crop to square aspect_ratio
@@ -42,4 +52,4 @@ const uploadOnCloudinary = async (imagePath, public_id) => {
 // });
 // console.log(autoCropUrl);
 
-export default uploadOnCloudinary;
+export {uploadOnCloudinary, deleteOldImage};

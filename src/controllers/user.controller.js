@@ -2,7 +2,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/ApiErrors.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import { User } from "../models/user.model.js";
-import uploadOnCloudinary from "../utils/cloudinary.js";
+import { uploadOnCloudinary, deleteOldImage } from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
@@ -331,27 +331,32 @@ const updateUserDetails = asyncHandler(async (req, res) => {
 const updateAvatar = asyncHandler(async (req, res) => {
   // Steps to update avatar
   // 1. Get the avatar image from the request
-  // 2. Upload the avatar image to cloudinary
-  // 3. Update the user object with the new avatar image
-  // 4. Send the updated user object in the response
+  // 2. Delete the old avatar image from cloudinary
+  // 3. Upload the avatar image to cloudinary
+  // 4. Update the user object with the new avatar image
+  // 5. Send the updated user object in the response
 
   // 1. Get the avatar image from the request
   const avatarLocalPath = req.file?.path;
   if (!avatarLocalPath) {
     throw new ApiError(400, "Please provide an avatar image");
   }
+  // 2. Delete the old avatar image from cloudinary
+  const publicId = req.user?.username + "-avatar";
+  console.log(publicId);
 
-  // 2. Upload the avatar image to cloudinary
-  const avatarUrl = await uploadOnCloudinary(
-    avatarLocalPath,
-    `${req.user?.username}-avatar`
-  );
+  if (publicId) {
+    await deleteOldImage(publicId);
+  }
+
+  // 3. Upload the avatar image to cloudinary
+  const avatarUrl = await uploadOnCloudinary(avatarLocalPath, publicId);
 
   if (!avatarUrl) {
     throw new ApiError(500, "Failed to upload avatar image");
   }
 
-  // 3. Update the user object with the new avatar image
+  // 4. Update the user object with the new avatar image
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
@@ -364,7 +369,7 @@ const updateAvatar = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User not found");
   }
 
-  // 4. Send the updated user object in the response
+  // 5. Send the updated user object in the response
   return res
     .status(200)
     .json(new ApiResponse(200, user, "Avatar updated successfully"));
@@ -373,9 +378,10 @@ const updateAvatar = asyncHandler(async (req, res) => {
 const updateCoverImage = asyncHandler(async (req, res) => {
   // Steps to update cover image
   // 1. Get the cover image from the request
-  // 2. Upload the cover image to cloudinary
-  // 3. Update the user object with the new cover image
-  // 4. Send the updated user object in the response
+  // 2. Delete the old cover image from cloudinary
+  // 3. Upload the cover image to cloudinary
+  // 4. Update the user object with the new cover image
+  // 5. Send the updated user object in the response
 
   // 1. Get the cover image from the request
   const coverImageLocalPath = req.file?.path;
@@ -383,7 +389,13 @@ const updateCoverImage = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Please provide a cover image");
   }
 
-  // 2. Upload the cover image to cloudinary
+  // 2. Delete the old cover image from cloudinary
+  const publicId = req.user?.username + "-cover";
+  if (publicId) {
+    await deleteOldImage(publicId);
+  }
+
+  // 3. Upload the cover image to cloudinary
   const coverImageUrl = await uploadOnCloudinary(
     coverImageLocalPath,
     `${req.user?.username}-cover`
@@ -393,7 +405,7 @@ const updateCoverImage = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Failed to upload cover image");
   }
 
-  // 3. Update the user object with the new cover image
+  // 4. Update the user object with the new cover image
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
@@ -406,7 +418,7 @@ const updateCoverImage = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User not found");
   }
 
-  // 4. Send the updated user object in the response
+  // 5. Send the updated user object in the response
   return res
     .status(200)
     .json(new ApiResponse(200, user, "Cover image updated successfully"));
@@ -432,8 +444,6 @@ const getChannelInfo = asyncHandler(async (req, res) => {
 
   // 1. Get the username from the request params
   const { username } = req.params;
-  console.log(username);
-  
 
   if (!username?.trim()) {
     throw new ApiError(400, "Please provide a username");
@@ -472,7 +482,7 @@ const getChannelInfo = asyncHandler(async (req, res) => {
         subscriptionCount: { $size: "$subscriptions" },
         isSubscribed: {
           $cond: {
-            if: { $in: [Object(req.user?._id), "$subscribers.subscriber"] },
+            if: { $in: [req.user?._id, "$subscribers.subscriber"] },
             then: true,
             else: false,
           },
@@ -489,6 +499,7 @@ const getChannelInfo = asyncHandler(async (req, res) => {
         bio: 1,
         subscriberCount: 1,
         subscriptionCount: 1,
+        videos: 1,
         isSubscribed: 1,
       },
     },
@@ -508,64 +519,6 @@ const getChannelInfo = asyncHandler(async (req, res) => {
       )
     );
 });
-// This controller will be used only after getting channel info
-// const subscribeUnsubscribe = asyncHandler(async(req, res) => {
-//   // Steps to subscribe or unsubscribe from a channel
-//   // 1. Get the channel username from the request params
-//   // 2. Find the channel using the username
-//   // 3. Check if the user is already subscribed or not
-//   // 4. If the user is subscribed, unsubscribe them
-//   // 5. If the user is not subscribed, subscribe them
-//   // 6. Send a response with a message
-
-//   // 1. Get the channel username from the request params
-//   const { username } = req.params;
-
-//   if (!username?.trim()) {
-//     throw new ApiError(400, "Please provide a username");
-//   }
-
-//   // 2. Find the channel using the username
-//   const channel = await User.findOne({ username });
-
-//   if (!channel) {
-//     throw new ApiError(404, "Channel not found");
-//   }
-
-//   // 3. Check if the user is already subscribed or not
-//   const isSubscribed = channel.subscribers.includes(req.user._id);
-
-//   // 4. If the user is subscribed, unsubscribe them
-//   if (isSubscribed) {
-//     await User.findByIdAndUpdate(req.user._id, {
-//       $pull: { subscriptions: channel._id },
-//     });
-//     await User.findByIdAndUpdate(channel._id, {
-//       $pull: { subscribers: req.user._id },
-//     });
-
-//     return res.status(200).json(
-//       new ApiResponse(200, {
-//         message: "Unsubscribed successfully",
-//       })
-//     );
-//   }
-
-//   // 5. If the user is not subscribed, subscribe them
-//   await User.findByIdAndUpdate(req.user._id, {
-//     $push: { subscriptions: channel._id },
-//   });
-//   await User.findByIdAndUpdate(channel._id, {
-//     $push: { subscribers: req.user._id },
-//   });
-
-//   // 6. Send a response with a message
-//   return res.status(200).json(
-//     new ApiResponse(200, {
-//       message: "Subscribed successfully",
-//     })
-//   );
-// })
 
 const getWatchHistory = asyncHandler(async (req, res) => {
   // Steps to get the watch history using aggregation pipeline
