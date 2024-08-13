@@ -19,7 +19,7 @@ const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "./public/temp");
   },
-  // Generate a unique name for the image
+  // Generate a unique name for the file
   filename: function (req, file, cb) {
     cb(null, file.originalname + "-" + Date.now());
   },

@@ -2,9 +2,10 @@ import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/ApiErrors.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import { User } from "../models/user.model.js";
-import { uploadOnCloudinary, deleteOldImage } from "../utils/cloudinary.js";
+import { uploadMediaOnCloudinary, deleteMedia } from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import FileSystem from "fs";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -54,6 +55,8 @@ const registerUser = asyncHandler(async (req, res) => {
   // 3. Check if user already exists
   const existingUser = await User.findOne({ $or: [{ username }, { email }] });
   if (existingUser) {
+    if (avatarLocalPath) FileSystem.unlinkSync(avatarLocalPath);
+    if (coverImageLocalPath) FileSystem.unlinkSync(coverImageLocalPath);
     throw new ApiError(409, "User already exists");
   }
 
@@ -65,16 +68,21 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Please provide an avatar image");
   }
   // Upload images to cloudinary
-  const avatarUrl = await uploadOnCloudinary(
+  const avatar = await uploadMediaOnCloudinary(
     avatarLocalPath,
+    "image",
     `${username}-avatar`
   );
-  const coverImageUrl = await uploadOnCloudinary(
+  const avatarUrl = avatar.url;
+
+  const coverImage = await uploadMediaOnCloudinary(
     coverImageLocalPath,
+    "image",
     `${username}-cover`
   );
+  const coverImageUrl = coverImage.url;
 
-  if (!avatarUrl) {
+  if (!avatarUrl.url) {
     throw new ApiError(500, "Failed to upload avatar image");
   }
 
@@ -347,11 +355,16 @@ const updateAvatar = asyncHandler(async (req, res) => {
   console.log(publicId);
 
   if (publicId) {
-    await deleteOldImage(publicId);
+    await deleteMedia(publicId);
   }
 
   // 3. Upload the avatar image to cloudinary
-  const avatarUrl = await uploadOnCloudinary(avatarLocalPath, publicId);
+  const avatar = await uploadMediaOnCloudinary(
+    avatarLocalPath,
+    "image",
+    publicId
+  );
+  const avatarUrl = avatar.url;
 
   if (!avatarUrl) {
     throw new ApiError(500, "Failed to upload avatar image");
@@ -393,14 +406,16 @@ const updateCoverImage = asyncHandler(async (req, res) => {
   // 2. Delete the old cover image from cloudinary
   const publicId = req.user?.username + "-cover";
   if (publicId) {
-    await deleteOldImage(publicId);
+    await deleteMedia(publicId);
   }
 
   // 3. Upload the cover image to cloudinary
-  const coverImageUrl = await uploadOnCloudinary(
+  const coverImage = await uploadMediaOnCloudinary(
     coverImageLocalPath,
+    "image",
     `${req.user?.username}-cover`
   );
+  const coverImageUrl = coverImage.url;
 
   if (!coverImageUrl) {
     throw new ApiError(500, "Failed to upload cover image");
@@ -527,7 +542,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
   const watchHistory = await User.aggregate([
     {
       $match: {
-        _id: new mongoose.Types.req.user._id,
+        _id: mongoose.Types.ObjectId.createFromHexString(req.user._id),
       },
     },
     {
