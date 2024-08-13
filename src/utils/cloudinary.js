@@ -8,40 +8,34 @@ cloudinary.config({
   api_secret: process.env.CLOUD_API_SECRET,
 });
 
-// Upload an image
-const uploadOnCloudinary = async (imagePath, public_id) => {
+// Upload media (image or video)
+const uploadMediaOnCloudinary = async (mediaPath, resource_type, public_id) => {
   try {
-    if (!imagePath) {
-      throw new Error("Please provide an image path");
+    if (!mediaPath) {
+      throw new Error("Please provide a media path");
     }
-    await cloudinary.uploader.upload(imagePath, {
+    const media = await cloudinary.uploader.upload(mediaPath, {
+      resource_type: resource_type || "auto",
       public_id: public_id || null,
     });
-    // Optimize delivery by resizing and applying auto-format and auto-quality
-    const optimizeUrl = cloudinary.url(public_id, {
-      fetch_format: "auto",
-      quality: "auto",
-    });
-    FileSystem.unlinkSync(imagePath);  // Delete the image from the local server after the upload
-    console.log(optimizeUrl);
-    return optimizeUrl;
+
+    FileSystem.unlinkSync(mediaPath); // Delete the media from the local server after the upload
+    return media;
   } catch (error) {
-    FileSystem.unlinkSync(imagePath);  // Delete the image from the local server as the upload is failed
+    FileSystem.unlinkSync(mediaPath); // Delete the media from the local server as the upload is failed
     console.error(error);
   }
 };
 
-// Delete an image using destroy
-const deleteOldImage = async (public_id) => {
+// Delete media (image or video) using destroy
+const deleteMedia = async (public_id) => {
   try {
     await cloudinary.uploader.destroy(public_id);
-    console.log("Image deleted successfully");
+    console.log("Media deleted successfully");
   } catch (error) {
     console.error(error);
   }
-}
-
-
+};
 
 // // Transform the image: auto-crop to square aspect_ratio
 // const autoCropUrl = cloudinary.url("shoes", {
@@ -52,4 +46,4 @@ const deleteOldImage = async (public_id) => {
 // });
 // console.log(autoCropUrl);
 
-export {uploadOnCloudinary, deleteOldImage};
+export { uploadMediaOnCloudinary, deleteMedia };
