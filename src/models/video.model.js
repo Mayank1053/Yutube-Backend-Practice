@@ -20,13 +20,17 @@ timestamps: The timestamps of when the video was created and updated.
 
 const videoSchema = new mongoose.Schema(
   {
-    videoFile: {
-      type: String, // Cloudinary URL
-      required: true,
-    },
-    thumbFile: {
+    videoUrl: {
       type: String,
       required: true,
+    },
+    thumbnail: {
+      type: String,
+      required: true,
+    },
+    thumbnailVersion: {
+      type: Number,
+      default: 0,
     },
     title: {
       type: String,
@@ -47,13 +51,14 @@ const videoSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    dislikes: {
-      type: Number,
-      default: 0,
-    },
-    tags: {
-      type: [String],
-      required: true,
+    tags: [
+      {
+        type: String,
+        required: true,
+      },
+    ],
+    chapters: {
+      type: mongoose.Schema.Types.Mixed,
     },
     comments: [
       {
