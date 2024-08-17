@@ -82,7 +82,7 @@ const registerUser = asyncHandler(async (req, res) => {
   );
   const coverImageUrl = coverImage.url;
 
-  if (!avatarUrl.url) {
+  if (!avatarUrl) {
     throw new ApiError(500, "Failed to upload avatar image");
   }
 
@@ -194,7 +194,7 @@ const logoutUser = asyncHandler(async (req, res) => {
   const options = {
     httpOnly: true,
     secure: true,
-    // sameSite: "none",
+    sameSite: "none",
   };
   return res
     .status(200)
@@ -240,7 +240,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     const options = {
       httpOnly: true,
       secure: true,
-      // sameSite: "none",
+      sameSite: "none", // Uncomment this line if you are using the frontend and backend on different domains
     };
 
     return res
@@ -271,21 +271,13 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user?._id);
 
   // 2. Get the current password, new password, and confirm password from the request
-  const { currentPassword, newPassword, confirmPassword } = req.body;
+  const { currentPassword, newPassword } = req.body;
 
   // 3. Check if the current password is correct
   const isPasswordCorrect = await user.comparePassword(currentPassword);
 
   if (!isPasswordCorrect) {
-    throw new ApiError(
-      400,
-      "Invalid password, please enter the correct password"
-    );
-  }
-
-  // Match new password and confirm password
-  if (newPassword !== confirmPassword) {
-    throw new ApiError(400, "Passwords do not match");
+    throw new ApiError(400, "Current password is incorrect");
   }
 
   // 4. Update the password with the new password
@@ -447,6 +439,10 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 
   // 1. Get the user object from the request
   const user = req.user;
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
 
   // 2. Send the user object in the response
   return res.status(200).json(new ApiResponse(200, user, "User found"));

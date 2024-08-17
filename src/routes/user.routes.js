@@ -29,7 +29,7 @@ router.route("/login").post(loginUser);
 router.route("/refresh-token").post(refreshAccessToken);
 // Secured routes
 router.route("/logout").post(verifyJwtToken, logoutUser);
-router.route("/change-password").get(verifyJwtToken, changeCurrentPassword);
+router.route("/change-password").post(verifyJwtToken, changeCurrentPassword);
 router.route("/me").get(verifyJwtToken, getCurrentUser);
 router.route("/update-details").patch(verifyJwtToken, updateUserDetails);
 router
